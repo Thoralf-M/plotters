@@ -4,7 +4,7 @@ class Chart {}
 
 const canvas = document.getElementById("canvas");
 const coord = document.getElementById("coord");
-const plotType = document.getElementById("plot-type");
+// const plotType = document.getElementById("plot-type");
 const status = document.getElementById("status");
 
 let chart = null;
@@ -23,21 +23,24 @@ export function setup(WasmChart) {
 /** Add event listeners. */
 function setupUI() {
     status.innerText = "WebAssembly loaded!";
-    plotType.addEventListener("change", updatePlot);
+    // plotType.addEventListener("change", updatePlot);
     window.addEventListener("resize", setupCanvas);
     window.addEventListener("mousemove", onMouseMove);
+    //render new image every 2 seconds
+    setInterval(()=>updatePlot(), 8000)
 }
 
 /** Setup canvas to properly handle high DPI and redraw current plot. */
 function setupCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    const aspectRatio = canvas.width / canvas.height;
-    const size = Math.min(canvas.width, canvas.parentNode.offsetWidth);
-    canvas.style.width = size + "px";
-    canvas.style.height = size / aspectRatio + "px";
-    canvas.width = size * dpr;
-    canvas.height = size / aspectRatio * dpr;
-    canvas.getContext("2d").scale(dpr, dpr);
+    // const dpr = window.devicePixelRatio || 1;
+    // const aspectRatio = canvas.width / canvas.height;
+    // const size = Math.min(canvas.width, canvas.parentNode.offsetWidth);
+    // canvas.style.width = size + "px";
+    // canvas.style.height = size / aspectRatio + "px";
+    
+    // canvas.width = size * dpr;
+    // canvas.height = size / aspectRatio * dpr;
+    canvas.getContext("2d").scale(1, 1);
     updatePlot();
 }
 
@@ -51,15 +54,43 @@ function onMouseMove(event) {
     }
 }
 
+//store transactions
+let txs = {}
+let socket = io.connect('http://localhost:8081');
+let index = 0
+socket.on('tx', function (tx) {
+    index++
+    txs[Object.keys(tx)] = tx[Object.keys(tx)]+index.toString().padStart(10, "0")
+    // console.log(index);
+})
+
+
 /** Redraw currently selected plot. */
 function updatePlot() {
-    const selected = plotType.selectedOptions[0];
-    status.innerText = `Rendering ${selected.innerText}...`;
+    // const selected = plotType.selectedOptions[0];
+    status.innerText = `Rendering ...`;
     chart = null;
     const start = performance.now();
-    chart = (selected.value == "mandelbrot")
-        ? Chart.mandelbrot(canvas)
-        : Chart.power("canvas", Number(selected.value));
+    let nine = '9'.repeat(81)
+    let A = 'A'.repeat(81)
+    let B = 'B'.repeat(81)
+    let C = 'C'.repeat(81)
+    let D = 'D'.repeat(81)
+    let E = 'E'.repeat(81)
+    let F = 'F'.repeat(81)
+    let arr = {
+        [B]:nine+A+'0000000001',
+        [C]:nine+B+'0000000002',
+        [D]:A+C+'0000000003',
+        [E]:B+C+'0000000004',
+        [F]:E+B+'0000000005',
+    }
+
+    // Chart.render_tangle("canvas", arr, 5);
+
+    //run "node zmqserver.js" to get txs
+    //value > 4 fails
+    Chart.render_tangle("canvas", txs, 4);
     const end = performance.now();
-    status.innerText = `Rendered ${selected.innerText} in ${Math.ceil(end - start)}ms`;
+    status.innerText = `Rendered in ${Math.ceil(end - start)}ms`;
 }
